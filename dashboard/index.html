@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Launch Radar — pre-token protocols ranked by implied value</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="logo">◉</div>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="sub">Protocols that record no token yet, ranked by what their launch would be worth. Snapshot: DefiLlama, <span id="asof">…</span>. Every figure on this page is computed from that sealed snapshot by the model below — no hand-picked names.</p>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab on" data-tab="board" role="tab">Radar board</button>
+  <button class="tab" data-tab="live" role="tab">Live comps (already trading)</button>
+  <button class="tab" data-tab="method" role="tab">How the radar works</button>
+</nav>
+
+<section id="view-board">
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search name, slug or chain…" aria-label="Search">
+    <select id="fcat" aria-label="Category"><option value="">All categories</option></select>
+    <select id="fchain" aria-label="Chain"><option value="">All chains</option></select>
+    <select id="fmin" aria-label="Minimum implied value">
+      <option value="0">Any implied value</option>
+      <option value="100000000">Implied ≥ $100M</option>
+      <option value="25000000">Implied ≥ $25M</option>
+      <option value="5000000">Implied ≥ $5M</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="fwatch"> Watchlist only</label>
+    <select id="sort" aria-label="Sort">
+      <option value="rank">Sort: implied value</option>
+      <option value="tvl">Sort: TVL</option>
+      <option value="growth">Sort: 7d growth</option>
+      <option value="age">Sort: days tracked</option>
+      <option value="conviction">Sort: conviction</option>
+    </select>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="tablewrap">
+    <table id="board">
+      <thead><tr>
+        <th>#</th><th>Protocol</th><th>Category</th><th>Chains</th>
+        <th class="num">TVL</th><th class="num">7d</th><th class="num">Age</th>
+        <th class="num">Peer ×</th><th class="num">Implied value</th><th>Conviction</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="hint">Click any row for the full model breakdown, its live peer comps and the step-by-step farm plan. “Records no token” is a statement about the snapshot’s record, not proof no token exists.</p>
+</section>
+
+<section id="view-live" hidden>
+  <p class="lede">These protocols already trade. They are <strong>not</strong> on the radar board — they are the evidence base: the radar’s peer multiples are the median market-cap / TVL ratios of exactly these protocols, grouped by category and family.</p>
+  <div class="tablewrap">
+    <table id="livetab">
+      <thead><tr><th>Protocol</th><th>Symbol</th><th>Category</th><th class="num">TVL</th><th class="num">Market cap</th><th class="num">Mcap / TVL</th><th class="num">7d</th></tr></thead>
+      <tbody id="liverows"></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="view-method" hidden>
+  <div class="method">
+    <h2>The screen — who gets on the board</h2>
+    <p>A protocol is a candidate when the snapshot records <em>no token</em> for it (CoinGecko id, ticker and market cap all absent) <em>and</em> it is not a wrapped, staked, bridged or exchange product of a token that already trades. Five rules do the excluding: <strong>R1</strong> derivative category (Bridge, Canonical Bridge, Cross Chain Bridge, Liquid Staking, Liquid Restaking, Restaked BTC, CEX); <strong>R2</strong> the words <i>wrapped / staked / staking</i> in the name; <strong>R3</strong> an exchange’s name at the front (a house product, e.g. Binance staked ETH); <strong>R4</strong> a version suffix (V2, 2.0… — a deployment of another protocol); <strong>R5</strong> a bare settlement ticker plus one letter (a wrapped unit, e.g. USDCx). That is why WBTC, Binance staked ETH and USDT0 are not on this board: each is an old token in a new wrapper. The house watchlist (TVL ≥ $50M after the same screen) is a floor, not a ceiling — every watchlist protocol is on the board, and the board reaches below the floor to the whole $5M+ universe.</p>
+    <h2>The value model — what a launch would be worth</h2>
+    <p class="formula">implied value = TVL × peer multiple × growth × maturity × breadth</p>
+    <ul>
+      <li><strong>Peer multiple</strong> — the median market-cap/TVL of the snapshot’s own token-bearing protocols in the same category, shrunk toward the family median and then the global median by comp count (weight n/(n+6)), so a category with three comps borrows strength instead of inventing a number. The detail view shows the exact comps behind every row.</li>
+      <li><strong>Growth</strong> — 7-day TVL change clamped to [−40%, +80%], weighted 0.30: one hot week moves value by at most +24%.</li>
+      <li><strong>Maturity</strong> — 0.80 + 0.40 × (1 − e<sup>−age/720</sup>): a protocol tracked for years with no token has a record a launch can price; a week-old one does not. Unknown listing date is neutral (×1.00).</li>
+      <li><strong>Breadth</strong> — +1.5% per chain beyond the first, capped at six: multi-chain distribution is worth something at launch, not everything.</li>
+    </ul>
+    <p>The model is one function (<code>impliedValueFor</code> in the page, <code>pickMultiple</code> and friends in the program) applied to every row alike. No protocol name is special-cased anywhere. Conviction is a display score only — size, momentum, track record — and never changes a rank.</p>
+    <h2>The farm plans</h2>
+    <p>Each row carries six steps generated from its own record — category action, capital scaled to its TVL tier, gas on its first chain, a holding period scaled to its age — each with a cost and a time. The plan assumes a token, if it comes, rewards sustained real use; it never advises splitting one position across many wallets.</p>
+  </div>
+</section>
+
+<aside id="drawer" hidden aria-label="Protocol detail">
+  <button id="close" aria-label="Close detail">×</button>
+  <div id="detail"></div>
+</aside>
+<div id="scrim" hidden></div>
+
+<script src="../data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
